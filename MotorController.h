@@ -15,8 +15,8 @@
 class motorController {
 
   public:
-  motorController(uint8_t , uint8_t  , uint8_t ,uint8_t  , uint8_t ,uint8_t );
-  motorController(uint8_t , uint8_t  , uint8_t ,uint8_t );
+  motorController(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t);
+  motorController(uint8_t, uint8_t, uint8_t, uint8_t );
   void update(int,int);
   void setRange(int);
   void reverseMotorA();

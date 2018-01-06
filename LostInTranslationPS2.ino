@@ -1,8 +1,15 @@
+#define DEBUG false
+/*
+ * ESP8266 WiFi receiver for "Lost In Translation" beetleweight combat robot
+ * Based on the code for the "Wheely Fast" antweight combat robot 
+ */
+
 #include "PS2X_lib.h"
 #include <ESP8266WiFi.h>
 #include <WiFiUDP.h>
 #include <Ticker.h>
 #include "MotorController.h"
+#include "Servo.h"
 
 extern "C" {
 #include "user_interface.h"
@@ -23,9 +30,9 @@ void setupWiFi(void);
 /////////////////////
 
 // stepper with direction and speed pins, don't use D0 for speed
-const int motorLeftDir  = D7;
-const int motorLeftSpd  = D8;
-const int motorRightDir = D1;
+const int motorLeftDir  = D1;
+const int motorLeftSpd  = D3;
+const int motorRightDir = D0;
 const int motorRightSpd = D2;
 //const int motorLeftA  = D5;
 //const int motorLeftB  = D6;
@@ -33,6 +40,16 @@ const int motorRightSpd = D2;
 //const int motorRightB = D2;
 motorController motors(motorLeftDir, motorLeftSpd, motorRightDir, motorRightSpd);
 //motorController motors(motorLeftA,motorLeftB,motorRightA,motorRightB, true);
+const int motorWeapon = D5;
+const int motorWeaponMinMilli = 544;
+const int motorWeaponMaxMilli = 2400;
+const int weaponMax = 90;
+const int weaponMin = 10;
+const int weaponStep = 10;
+int weaponSpeed = 20;
+Servo weapon;
+
+const int steeringSensitivity = 0.6;
 
 // UDP variables
 unsigned int localPort = 8888;
@@ -65,7 +82,7 @@ void CheckHeartBeat(void)
 void setup()
 {
   system_update_cpu_freq(80);        // set cpu to 160MHZ !
-  Serial.begin(250000);
+  Serial.begin(115200);
   delay(100);
   setupWiFi();
   HeartBeatTicker.attach_ms(500, CheckHeartBeat);
@@ -76,6 +93,10 @@ void setup()
   //motors.setMinimumSpeed(0.10);         // this setting is optional, default is 0.1(10%) to prevent motor from stalling at low speed
   pinMode(D4, OUTPUT);
   digitalWrite(D4, LOW); // Turn on onboard LED
+
+  weapon.attach(motorWeapon, motorWeaponMinMilli, motorWeaponMaxMilli);
+  //weapon.writeMicroseconds(0);
+  weapon.write(90); //Stop motor
 }
 
 void loop()
@@ -104,10 +125,14 @@ void setupWiFi()
     Serial.println(F("Connection failed"));
   }
 }
-boolean checkForIncomingData() {
-  if (udpConnected) {
+
+boolean checkForIncomingData() 
+{
+  if (udpConnected) 
+  {
     int packetSize = UDP.parsePacket();
-    if (packetSize) { // if there’s data available, read a packet
+    if (packetSize) 
+    { // if there’s data available, read a packet
       char packetBuffer[packetSize];
       boolean firstPacketSkipped = remotePortAddress;
       if (!remotePortAddress || remotePortAddress != UDP.remotePort())Serial.println("Controller Connected, Port: " + String(UDP.remotePort()));
@@ -119,7 +144,8 @@ boolean checkForIncomingData() {
         UDP.read(packetBuffer, packetSize);
         //Serial.println(packetBuffer);
         // send to library
-        for (int a = 0; a < 21; a++) {
+        for (int a = 0; a < 21; a++) 
+        {
           ps2x.PS2data[a] = packetBuffer[a];
         }
         ps2x.last_buttons = ps2x.buttons; //store the previous buttons states
@@ -133,47 +159,53 @@ boolean checkForIncomingData() {
   }
   return false;
 }
+
 int translateStick(int value, int newRange)
 {
   int newValue = 0;
-  int deadZone = 70;
+  int deadZone = 30;//70;
   int upperZone = 127 + (deadZone * 0.5);
-  if (value > upperZone) {
+  if (value > upperZone) 
+  {
     newValue = map(value , upperZone, 255 , 1 , newRange);
   }
   int lowerZone = 127 - (deadZone * 0.5);
-  if (value < lowerZone) {
+  if (value < lowerZone) 
+  {
     newValue = map(value , lowerZone, 1 , -1 , -newRange);
   }
   return newValue;
 }
 
+bool DUP = false;
+bool DDOWN = false;
+
 void processData()
 {
   HeartBeatRcvd = true;
-  if (ps2x.ButtonReleased(PSB_CROSS)) // Flip back up the right way
+  /*if (ps2x.ButtonReleased(PSB_CROSS)) // Flip back up the right way
   {
     int dY = 500;
     int dX = 0;
     motors.update(dX, dY); //recieved data, must be connected
     delay(200);
-  }
-//  else if (ps2x.Button(PSB_L1 ))
-//  {
-//    int range = 200;
-//    motors.setSteeringSensitivity(0.6);
-//    if (ps2x.Button(PSB_L2))
-//    {
-//      range = 500; // Boost drive mode
-//      motors.setSteeringSensitivity(0.2);
-//    }
-//    int dY = translateStick(ps2x.Analog(PSS_LY) , range); // Left stick forward and Back
-//    //if (ps2x.Button(PSB_R2))range = 500; // slow steering mode
-//    int dX = translateStick(ps2x.Analog(PSS_RX) , range); // Right Stick steering
-//    motors.update(dX, dY); //recieved data, must be connected
-//  }
-  else
+  }*/
+/*  else if (ps2x.Button(PSB_L1 ))
   {
+    int range = 200;
+    motors.setSteeringSensitivity(0.6);
+    if (ps2x.Button(PSB_L2))
+    {
+      range = 500; // Boost drive mode
+      motors.setSteeringSensitivity(0.2);
+    }
+    int dY = translateStick(ps2x.Analog(PSS_LY) , range); // Left stick forward and Back
+    //if (ps2x.Button(PSB_R2))range = 500; // slow steering mode
+    int dX = translateStick(ps2x.Analog(PSS_RX) , range); // Right Stick steering
+    motors.update(dX, dY); //recieved data, must be connected
+  }
+  else*/
+  /*{
     int range = 200;
     motors.setSteeringSensitivity(0.6);
     if (ps2x.Button(PSB_L2))
@@ -186,7 +218,69 @@ void processData()
     int dX = translateStick(ps2x.Analog(PSS_RX) , range); // Right Stick steering
     if (ps2x.Button(PSB_L1 ))motors.update(dX*-1, dY*-1); // reverse controls if upside down
     else   motors.update(dX, dY); //recieved data, must be connected
+  }*/
+  const int range = 500;
+  motors.setSteeringSensitivity(steeringSensitivity);
+  int dY = translateStick(ps2x.Analog(PSS_LY), range);
+  int dX = translateStick(ps2x.Analog(PSS_RX), range);
+  bool motorForward = ps2x.Button(PSB_R2);
+  bool motorReverse = ps2x.Button(PSB_R1);
+  bool L1 = ps2x.Button(PSB_L1);
+
+  bool UP = ps2x.Button(PSB_PAD_UP);
+  bool DOWN = ps2x.Button(PSB_PAD_DOWN);
+
+  if(!DUP && UP)
+  {
+    DUP = true;
+    int temp = weaponSpeed + weaponStep;
+    weaponSpeed = (temp <= weaponMax ? (temp >= weaponMin ? temp : weaponMin) : weaponMax);
+  }
+  else if(!DDOWN && DOWN)
+  {
+    DDOWN = true;
+    int temp = weaponSpeed - weaponStep;
+    weaponSpeed = (temp <= weaponMax ? (temp >= weaponMin ? temp : weaponMin) : weaponMax);
+  }
+  else if (DUP || DDOWN)
+  {
+    DUP = UP;
+    DDOWN = DOWN;
   }
   
+  if(L1)
+  {
+    motors.update(dX*-1, dY*-1);
+    if(motorReverse) weapon.write(90 - weaponSpeed);
+    else if(motorForward) weapon.write(90 + weaponSpeed);
+    else weapon.write(90);
+  }
+  else
+  {
+    motors.update(dX, dY);
+    if(motorReverse) weapon.write(90 + weaponSpeed);
+    else if(motorForward) weapon.write(90 - weaponSpeed);
+    else weapon.write(90);
+  }
+
+  if(DEBUG)
+  {
+    if(L1)
+    {
+      Serial.print("Drive: "); Serial.print(dX*-1); Serial.print(" "); Serial.println(dY*-1);
+      Serial.print("Weapon: ");
+      if(motorReverse) Serial.println(90 - weaponSpeed);
+      else if(motorForward) Serial.println(90 + weaponSpeed);
+      else Serial.println(90);
+    }
+    else
+    {
+      Serial.print("Drive: "); Serial.print(dX); Serial.print(" "); Serial.println(dY);
+      Serial.print("Weapon: ");
+      if(motorReverse) Serial.println(90 + weaponSpeed);
+      else if(motorForward) Serial.println(90 - weaponSpeed);
+      else Serial.println(90);
+    }
+  }
 }
 
