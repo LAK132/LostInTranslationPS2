@@ -30,17 +30,17 @@ void setupWiFi(void);
 /////////////////////
 
 // stepper with direction and speed pins, don't use D0 for speed
-const int motorLeftDir  = D1;
+const int motorLeftDir  = D2;
 const int motorLeftSpd  = D3;
-const int motorRightDir = D0;
-const int motorRightSpd = D2;
+const int motorRightDir = D5;//D0;
+const int motorRightSpd = D8;//D2;
 //const int motorLeftA  = D5;
 //const int motorLeftB  = D6;
 //const int motorRightA = D3;
 //const int motorRightB = D2;
 motorController motors(motorLeftDir, motorLeftSpd, motorRightDir, motorRightSpd);
 //motorController motors(motorLeftA,motorLeftB,motorRightA,motorRightB, true);
-const int motorWeapon = D5;
+const int motorWeapon = D1;//D5;
 const int motorWeaponMinMilli = 544;
 const int motorWeaponMaxMilli = 2400;
 const int weaponMax = 90;
@@ -91,8 +91,8 @@ void setup()
   motors.setSteeringSensitivity(0.15);  // this setting is optional
   motors.setPWMFrequency(1000);           // this setting is optional, depending on power supply and H-Bridge this option will alter motor noise and torque.
   //motors.setMinimumSpeed(0.10);         // this setting is optional, default is 0.1(10%) to prevent motor from stalling at low speed
-  pinMode(D4, OUTPUT);
-  digitalWrite(D4, LOW); // Turn on onboard LED
+  pinMode(D7, OUTPUT);
+  digitalWrite(D7, HIGH); // Turn on onboard LED
 
   weapon.attach(motorWeapon, motorWeaponMinMilli, motorWeaponMaxMilli);
   //weapon.writeMicroseconds(0);
